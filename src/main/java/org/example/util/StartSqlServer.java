@@ -12,23 +12,19 @@ public class StartSqlServer {
             ProcessBuilder processBuilder;
 
             if (os.contains("win")) {
-                // Za Windows
                 processBuilder = new ProcessBuilder("C:\\xampp\\mysql\\bin\\mysqld.exe");
             } else if (os.contains("mac")) {
-                // Za macOS (start komanda)
                 processBuilder = new ProcessBuilder("sudo", "/Applications/XAMPP/xamppfiles/bin/mysql.server", "start");
             } else {
                 System.out.println("Nepodržan operativni sistem.");
                 return;
             }
 
-            processBuilder.inheritIO(); // Prikazuje izlaz i greške u terminalu
+            processBuilder.inheritIO();
             Process process = processBuilder.start();
 
-            // Sačekaj nekoliko sekundi da se server podigne
             Thread.sleep(5000);
 
-            // Proveri da li se može uspostaviti konekcija
             if (testConnection()) {
                 System.out.println("MySQL server je uspešno pokrenut i dostupan.");
             } else {
