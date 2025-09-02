@@ -174,7 +174,7 @@ public class AddSubscriptionView extends Stage {
         LocalDate start = startDatePicker.getValue();
         LocalDate end;
 
-        if (type.equals("custom")) {
+        if (type.equals("Custom")) {
             end = customEndDatePicker.getValue();
             if (end == null || end.isBefore(start)) {
                 showAlert("Greška", "Molimo izaberite validan datum završetka.");
