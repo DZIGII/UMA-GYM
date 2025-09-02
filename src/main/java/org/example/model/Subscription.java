@@ -147,7 +147,7 @@ public class Subscription {
     }
 
     public String getEndIn() {
-        long daysBetween = ChronoUnit.DAYS.between(dateStart, dateEnd);
+        long daysBetween = ChronoUnit.DAYS.between(LocalDate.now(), dateEnd);
         return daysBetween + " dana";
     }
 

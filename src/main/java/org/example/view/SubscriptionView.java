@@ -3,10 +3,7 @@ package org.example.view;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -17,6 +14,8 @@ import org.example.controller.SubscriptionDoubleClickListener;
 import org.example.model.Subscription;
 import org.example.util.JDBCUtilities;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -28,6 +27,8 @@ public class SubscriptionView extends VBox {
     private TextField search;
     private ChoiceBox<String> filterCb;
     private TableView<Subscription> tableUser;
+    private ScrollPane scrollPane;
+    private VBox cardsContainer;
 
 
     private SubscriptionView() {
@@ -45,66 +46,69 @@ public class SubscriptionView extends VBox {
     private void initElements() {
 
         search = new TextField();
+        search.setPromptText("Search...");
+        search.setStyle(
+                "-fx-font-size: 17px;" +
+                        "-fx-padding: 8 12;" +
+                        "-fx-background-color: white;" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #ddd;" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-border-width: 1;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 3, 0, 0, 1);"
+        );
         filterCb = new ChoiceBox<>();
+        filterCb.setStyle(
+                "-fx-font-size: 14px;" +
+                        "-fx-padding: 6 12;" +
+                        "-fx-background-color: white;" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #ddd;" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-border-width: 1;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 3, 0, 0, 1);"
+        );
 
         title = new Text("Aktivni Korisnici");
-        title.setFont(Font.font("Arial", 24));
+        title.setFont(Font.font("Arial", 40));
 
         tableUser = new TableView<>();
 
-        TableColumn IDCol = new TableColumn<>("ID");
-        IDCol.setCellValueFactory(new PropertyValueFactory<>("id"));
 
-        TableColumn firstNameCol = new TableColumn<>("Ime");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
-
-        TableColumn lastNameCol = new TableColumn<>("Prezime");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
-
-        TableColumn employeeCol = new TableColumn<>("Potpisao");
-        employeeCol.setCellValueFactory(new PropertyValueFactory<>("employeeFullName"));
-
-        TableColumn dateStartCol = new TableColumn<>("Početak pretplate");
-        dateStartCol.setCellValueFactory(new PropertyValueFactory<>("dateStart"));
-
-        TableColumn dateEndCol = new TableColumn<>("Kraj Pretplate");
-        dateEndCol.setCellValueFactory(new PropertyValueFactory<>("dateEnd"));
-
-        TableColumn treadMill = new TableColumn<>("Traka za trčanje");
-        treadMill.setCellValueFactory(new PropertyValueFactory<>("treadmillIncluded"));
-
-        TableColumn debt = new TableColumn<>("Dug");
-        debt.setCellValueFactory(new PropertyValueFactory<>("debt"));
-
-        TableColumn endIn = new TableColumn<>("Ističe za");
-        endIn.setCellValueFactory(new PropertyValueFactory<>("endIn"));
 
         filterCb.getItems().addAll(List.of("Svi članovi", "Platio", "Nije platio", "Sortirano po kraju članarine"));
         filterCb.setValue("Svi članovi");
 
-
-        tableUser.setItems(FXCollections.observableArrayList(JDBCUtilities.selectAllSubscriptions()));
-        tableUser.getColumns().addAll(firstNameCol, lastNameCol, dateStartCol, dateEndCol, employeeCol, treadMill, debt, endIn);
-
-
     }
 
     private void showElements() {
-
         HBox hb = new HBox(10);
         HBox.setHgrow(search, Priority.ALWAYS);
         search.setMaxWidth(Double.MAX_VALUE);
-        hb.getChildren().addAll(search, filterCb);
         hb.setSpacing(20);
-        this.getChildren().addAll(title, hb, tableUser);
+        hb.getChildren().addAll(search, filterCb);
+
+        cardsContainer = new VBox(10);
+        cardsContainer.setPadding(new Insets(10));
+        cardsContainer.getChildren().addAll(getSubscriptionCards());
+
+        scrollPane = new ScrollPane(cardsContainer);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-border-color: transparent;"
+        );
+
         this.setPadding(new Insets(20));
-        this.setAlignment(Pos.CENTER);
         this.setSpacing(20);
+        this.setAlignment(Pos.TOP_CENTER);
+        this.getChildren().addAll(title, hb, scrollPane);
     }
 
-    private void controller() {
-        tableUser.setOnMouseClicked(new SubscriptionDoubleClickListener(tableUser));
 
+    private void controller() {
         search.textProperty().addListener((obs, oldVal, newVal) -> updateFilteredUsers());
         filterCb.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> updateFilteredUsers());
     }
@@ -117,9 +121,11 @@ public class SubscriptionView extends VBox {
 
         List<Subscription> filteredSubscriptions = allSubscriptions.stream()
                 .filter(subscription -> {
+                    String fullName = subscription.getFirstName().toLowerCase() + " " + subscription.getLastName().toLowerCase();
                     boolean matchesSearch = searchText.isEmpty()
                             || subscription.getFirstName().toLowerCase().contains(searchText)
-                            || subscription.getLastName().toLowerCase().contains(searchText);
+                            || subscription.getLastName().toLowerCase().contains(searchText)
+                            || fullName.contains(searchText);
 
                     if (!matchesSearch) return false;
 
@@ -143,12 +149,28 @@ public class SubscriptionView extends VBox {
                     .toList();
         }
 
-        tableUser.setItems(FXCollections.observableArrayList(filteredSubscriptions));
+        cardsContainer.getChildren().clear();
+        for (Subscription s : filteredSubscriptions) {
+            cardsContainer.getChildren().add(new SubscriptionCard(s));
+        }
     }
+
 
     public void refreshUserTable() {
-        this.tableUser.setItems(FXCollections.observableArrayList(JDBCUtilities.selectAllSubscriptions()));
+        cardsContainer.getChildren().clear();
+        cardsContainer.getChildren().addAll(getSubscriptionCards());
     }
 
+
+    public List<SubscriptionCard> getSubscriptionCards() {
+        List<Subscription> subscriptions = JDBCUtilities.selectAllSubscriptions();
+        List<SubscriptionCard> subscriptionCards = new ArrayList<>();
+
+        for (Subscription s : subscriptions) {
+            subscriptionCards.add(new SubscriptionCard(s));
+        }
+
+        return subscriptionCards;
+    }
 
 }

@@ -4,13 +4,11 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import org.example.util.JDBCUtilities;
-
-import java.time.LocalDate;
 
 public class ProfilView extends VBox {
 
@@ -50,57 +48,65 @@ public class ProfilView extends VBox {
 
     private void showEl() {
         Text title = new Text("Profil Trenera");
-        title.setFont(Font.font("Arial", 24));
+        title.setFont(Font.font("Arial", 40));
 
-        logOutBtn.setStyle(
-                "-fx-background-color: black;" +
-                        "-fx-text-fill: white;" +
-                        "-fx-font-weight: bold;" +
-                        "-fx-background-radius: 8;" +
-                        "-fx-padding: 8 16 8 16;"
-        );
-        signInEmployee.setStyle(
-                "-fx-background-color: black;" +
-                        "-fx-text-fill: white;" +
-                        "-fx-font-weight: bold;" +
-                        "-fx-background-radius: 8;" +
-                        "-fx-padding: 8 16 8 16;"
-        );
-
-        GridPane grid = new GridPane();
-        grid.setPadding(new Insets(20));
-        grid.setVgap(10);
-        grid.setHgap(10);
-        grid.setAlignment(Pos.CENTER_LEFT);
-
-        grid.add(new Label("Ime:"), 0, 0);
-        grid.add(firstName, 1, 0);
-
-        grid.add(new Label("Prezime:"), 0, 1);
-        grid.add(lastName, 1, 1);
-
-        grid.add(new Label("Datum rođenja:"), 0, 2);
-        grid.add(dateOfBirth, 1, 2);
-
-        grid.add(new Label("Telefon:"), 0, 3);
-        grid.add(phoneNumber, 1, 3);
-
-        grid.add(new Label("Korisničko ime:"), 0, 4);
-        grid.add(userName, 1, 4);
-
-        grid.add(new Label("Admin status:"), 0, 5);
-        grid.add(isAdmin, 1, 5);
-
-        grid.add(logOutBtn, 0, 6);
         if (JDBCUtilities.currentEmployee.isAdmin()) {
-            grid.add(signInEmployee, 1, 6);
+            //grid.add(signInEmployee, 1, 6);
         }
 
-        this.getChildren().addAll(title, grid);
+        HBox hb = new HBox();
+        hb.setSpacing(30);
+        hb.setPadding(new Insets(70, 20, 20, 70));
+        hb.getChildren().addAll(new EmployeeCard(JDBCUtilities.currentEmployee), new AddEmployeeCard());
+
+        Button logOutBtn = new Button("Log Out");
+        logOutBtn.setStyle(
+                "-fx-background-color: #d32f2f;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-font-weight: bold;" +
+                        "-fx-font-size: 16px;" +
+                        "-fx-background-radius: 8;" +
+                        "-fx-padding: 12 24;" +
+                        "-fx-cursor: hand;"
+        );
+
+        logOutBtn.setOnMouseEntered(e -> {
+            logOutBtn.setStyle(
+                    "-fx-background-color: #b71c1c;" +
+                            "-fx-text-fill: white;" +
+                            "-fx-font-weight: bold;" +
+                            "-fx-font-size: 16px;" +
+                            "-fx-background-radius: 8;" +
+                            "-fx-padding: 12 24;" +
+                            "-fx-cursor: hand;"
+            );
+        });
+
+        logOutBtn.setOnMouseExited(e -> {
+            logOutBtn.setStyle(
+                    "-fx-background-color: #d32f2f;" +
+                            "-fx-text-fill: white;" +
+                            "-fx-font-weight: bold;" +
+                            "-fx-font-size: 16px;" +
+                            "-fx-background-radius: 8;" +
+                            "-fx-padding: 12 24;" +
+                            "-fx-cursor: hand;"
+            );
+        });
+
+        logOutBtn.setOnAction(e -> {
+            MainView.getInstance().close();
+            LogIn.getInstance().show();
+        });
+
+        HBox buttonContainer = new HBox(logOutBtn);
+        buttonContainer.setAlignment(Pos.TOP_RIGHT);
+        buttonContainer.setPadding(new Insets(30, 50, 0, 0));
+
+        this.getChildren().addAll(title, hb, buttonContainer);
         this.setPadding(new Insets(20));
         this.setSpacing(20);
         this.setAlignment(Pos.TOP_CENTER);
-
     }
 
     public void setProfileData(String firstNamee, String lastNamee, String dateOfBirthh,

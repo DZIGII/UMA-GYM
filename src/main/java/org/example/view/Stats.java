@@ -6,6 +6,7 @@ import javafx.scene.chart.*;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.VBox;
 
+import javafx.scene.text.Font;
 import org.example.model.MonthStats;
 import org.example.util.JDBCUtilities;
 

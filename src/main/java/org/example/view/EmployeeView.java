@@ -5,7 +5,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -14,6 +14,8 @@ import javafx.scene.text.Text;
 import org.example.model.Employee;
 import org.example.util.JDBCUtilities;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class EmployeeView extends VBox {
@@ -22,7 +24,8 @@ public class EmployeeView extends VBox {
 
     private Text title;
     private TextField search;
-    private TableView<Employee> tableEmployee;
+    private FlowPane cardContainer;
+    private ObservableList<Employee> originalEmployees;
 
     private EmployeeView() {
         initElements();
@@ -39,110 +42,136 @@ public class EmployeeView extends VBox {
     private void initElements() {
         search = new TextField();
         search.setPromptText("Pretraži zaposlene...");
+        originalEmployees = FXCollections.observableArrayList(JDBCUtilities.selectAllEmployees());
 
         title = new Text("Zaposleni");
-        title.setFont(Font.font("Arial", 24));
-
-        tableEmployee = new TableView<>();
-
-        TableColumn<Employee, Integer> idCol = new TableColumn<>("ID");
-        idCol.setCellValueFactory(new PropertyValueFactory<>("id"));
-
-        TableColumn<Employee, String> firstNameCol = new TableColumn<>("Ime");
-        firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
-
-        TableColumn<Employee, String> lastNameCol = new TableColumn<>("Prezime");
-        lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastNmae"));
-
-        TableColumn<Employee, String> phoneNumberCol = new TableColumn<>("Telefon");
-        phoneNumberCol.setCellValueFactory(new PropertyValueFactory<>("phoneNumber"));
-
-        TableColumn<Employee, String> dateOfBirthCol = new TableColumn<>("Datum rodjenja");
-        dateOfBirthCol.setCellValueFactory(new PropertyValueFactory<>("DateOfBirth"));
-
-        TableColumn<Employee, String> isAdminCol = new TableColumn<>("Admin");
-        isAdminCol.setCellValueFactory(new PropertyValueFactory<>("admin"));
-
-        tableEmployee.setItems(FXCollections.observableArrayList(JDBCUtilities.selectAllEmployees()));
-
-        tableEmployee.getColumns().addAll(idCol, firstNameCol, lastNameCol, phoneNumberCol, dateOfBirthCol, isAdminCol);
+        title.setFont(Font.font("Arial", 40));
     }
 
     private void showElements() {
-        HBox hb = new HBox(10);
+        HBox searchBox = new HBox();
         HBox.setHgrow(search, Priority.ALWAYS);
-        search.setMaxWidth(Double.MAX_VALUE);
-        hb.getChildren().add(search);
+        searchBox.getChildren().add(search);
+        searchBox.setPadding(new Insets(0, 0, 20, 0));
 
-        this.getChildren().addAll(title, hb, tableEmployee);
+        search.setMaxWidth(Double.MAX_VALUE);
+        search.setPromptText("Pretraži zaposlene...");
+        search.setStyle(
+                "-fx-font-size: 17px;" +
+                        "-fx-padding: 8 12;" +
+                        "-fx-background-color: white;" +
+                        "-fx-background-radius: 12;" +
+                        "-fx-border-color: #ddd;" +
+                        "-fx-border-radius: 12;" +
+                        "-fx-border-width: 1;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 3, 0, 0, 1);"
+        );
+
+        cardContainer = new FlowPane();
+        cardContainer.setHgap(20);
+        cardContainer.setVgap(20);
+        cardContainer.setAlignment(Pos.TOP_CENTER);
+        cardContainer.getChildren().addAll(addAllCards());
+
+        ScrollPane scrollPane = new ScrollPane(cardContainer);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setStyle(
+                "-fx-background-color: transparent;" +
+                        "-fx-border-color: transparent;" +
+                        "-fx-padding: 10;"
+        );
+
+        // VBox za header (title + search)
+        VBox headerBox = new VBox(15, title, searchBox);
+        headerBox.setAlignment(Pos.TOP_CENTER);
+        headerBox.setPadding(new Insets(0, 0, 20, 0));
+
+        // Glavni layout
+        VBox mainContent = new VBox();
+        mainContent.getChildren().addAll(headerBox, scrollPane);
+        VBox.setVgrow(scrollPane, Priority.ALWAYS);
+
+        this.getChildren().add(mainContent);
         this.setPadding(new Insets(20));
-        this.setAlignment(Pos.CENTER);
-        this.setSpacing(20);
+        this.setSpacing(0);
+        this.setAlignment(Pos.TOP_CENTER);
     }
 
     private void controller() {
-        tableEmployee.setOnMouseClicked(event -> {
-            if (event.getClickCount() == 2 && tableEmployee.getSelectionModel().getSelectedItem() != null) {
-                Employee selected = tableEmployee.getSelectionModel().getSelectedItem();
-
-                if (JDBCUtilities.currentEmployee != null && JDBCUtilities.currentEmployee.isAdmin()) {
-                    Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-                    confirm.setTitle("Brisanje zaposlenog");
-                    confirm.setHeaderText(null);
-                    confirm.setContentText("Da li ste sigurni da želite da obrišete zaposlenog: " +
-                            selected.getFirstName() + " " + selected.getLastNmae() + "?");
-
-                    Optional<ButtonType> result = confirm.showAndWait();
-                    if (result.isPresent() && result.get() == ButtonType.OK) {
-                        boolean deleted = JDBCUtilities.deleteEmployeeById(selected.getId());
-                        if (deleted) {
-                            refreshData();
-                            Alert success = new Alert(Alert.AlertType.INFORMATION);
-                            success.setTitle("Uspešno");
-                            success.setHeaderText(null);
-                            success.setContentText("Zaposleni je uspešno obrisan.");
-                            success.showAndWait();
-                        } else {
-                            Alert error = new Alert(Alert.AlertType.ERROR);
-                            error.setTitle("Greška");
-                            error.setHeaderText(null);
-                            error.setContentText("Došlo je do greške prilikom brisanja zaposlenog.");
-                            error.showAndWait();
-                        }
-                    }
-                }
-            }
-        });
-
         search.textProperty().addListener((observable, oldValue, newValue) -> {
             filterEmployees(newValue);
         });
     }
 
     private void filterEmployees(String text) {
+        cardContainer.getChildren().clear();
+
         if (text == null || text.isEmpty()) {
-            tableEmployee.setItems(FXCollections.observableArrayList(JDBCUtilities.selectAllEmployees()));
+            cardContainer.getChildren().addAll(addAllCards());
             return;
         }
 
-        String lowerCaseFilter = text.toLowerCase();
+        String lowerCaseFilter = text.toLowerCase().trim();
 
-        ObservableList<Employee> filteredList = FXCollections.observableArrayList();
-        for (Employee emp : JDBCUtilities.selectAllEmployees()) {
+        for (Employee emp : originalEmployees) {
             if ((emp.getFirstName() != null && emp.getFirstName().toLowerCase().contains(lowerCaseFilter)) ||
-                    (emp.getLastNmae() != null && emp.getLastNmae().toLowerCase().contains(lowerCaseFilter))) {
-                filteredList.add(emp);
+                    (emp.getLastNmae() != null && emp.getLastNmae().toLowerCase().contains(lowerCaseFilter)) ||
+                    (emp.getUserName() != null && emp.getUserName().toLowerCase().contains(lowerCaseFilter))) {
+
+                cardContainer.getChildren().add(new EmployeeCard(emp));
             }
         }
-
-        tableEmployee.setItems(filteredList);
     }
-
 
     public void refreshData() {
-        tableEmployee.setItems(FXCollections.observableArrayList(JDBCUtilities.selectAllEmployees()));
+        originalEmployees.setAll(JDBCUtilities.selectAllEmployees());
+        cardContainer.getChildren().setAll(addAllCards());
     }
 
+    private List<EmployeeCard> addAllCards() {
+        List<EmployeeCard> employeeCards = new ArrayList<>();
+        for (Employee emp : originalEmployees) {
+            EmployeeCard card = new EmployeeCard(emp);
+
+            card.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2) {
+                    handleEmployeeCardClick(emp);
+                }
+            });
+
+            employeeCards.add(card);
+        }
+        return employeeCards;
+    }
+
+    private void handleEmployeeCardClick(Employee employee) {
+        if (JDBCUtilities.currentEmployee != null && JDBCUtilities.currentEmployee.isAdmin()) {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Brisanje zaposlenog");
+            confirm.setHeaderText(null);
+            confirm.setContentText("Da li ste sigurni da želite da obrišete zaposlenog: " +
+                    employee.getFirstName() + " " + employee.getLastNmae() + "?");
+
+            Optional<ButtonType> result = confirm.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                boolean deleted = JDBCUtilities.deleteEmployeeById(employee.getId());
+                if (deleted) {
+                    refreshData();
+                    Alert success = new Alert(Alert.AlertType.INFORMATION);
+                    success.setTitle("Uspešno");
+                    success.setHeaderText(null);
+                    success.setContentText("Zaposleni je uspešno obrisan.");
+                    success.showAndWait();
+                } else {
+                    Alert error = new Alert(Alert.AlertType.ERROR);
+                    error.setTitle("Greška");
+                    error.setHeaderText(null);
+                    error.setContentText("Došlo je do greške prilikom brisanja zaposlenog.");
+                    error.showAndWait();
+                }
+            }
+        }
+    }
 }
-
-
